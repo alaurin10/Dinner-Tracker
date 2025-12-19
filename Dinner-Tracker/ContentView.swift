@@ -8,17 +8,33 @@
 import SwiftUI
 
 struct ContentView: View {
+    @EnvironmentObject var dataStore: RecipeDataStore
+    @State private var selectedTab = 0
+    
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        TabView(selection: $selectedTab) {
+            AvailableRecipesView(dataStore: dataStore)
+                .tabItem {
+                    Label("Available", systemImage: "fork.knife")
+                }
+                .tag(0)
+            
+            RecipesView(dataStore: dataStore)
+                .tabItem {
+                    Label("Recipes", systemImage: "book.fill")
+                }
+                .tag(1)
+            
+            IngredientsView(dataStore: dataStore)
+                .tabItem {
+                    Label("Ingredients", systemImage: "list.bullet")
+                }
+                .tag(2)
         }
-        .padding()
     }
 }
 
 #Preview {
     ContentView()
+        .environmentObject(RecipeDataStore())
 }
