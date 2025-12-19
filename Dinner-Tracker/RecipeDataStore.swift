@@ -59,7 +59,7 @@ class RecipeDataStore: ObservableObject {
         let availableIngredientNames = Set(availableIngredients.map { $0.name.lowercased() })
         
         return recipes.filter { recipe in
-            let recipeIngredientNames = Set(recipe.ingredients.map { $0.name.lowercased() })
+            let recipeIngredientNames = Set(recipe.recipeIngredients.map { $0.name.lowercased() })
             return recipeIngredientNames.isSubset(of: availableIngredientNames)
         }
     }

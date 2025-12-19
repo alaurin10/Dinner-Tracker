@@ -33,22 +33,38 @@ struct AvailableRecipesView: View {
                     .listRowSeparator(.hidden)
                 } else {
                     ForEach(availableRecipes) { recipe in
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(recipe.name)
-                                .font(.headline)
-                            
-                            FlowLayout(spacing: 6) {
-                                ForEach(recipe.ingredients) { ingredient in
-                                    Text(ingredient.name)
-                                        .font(.caption)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 4)
-                                        .background(Color.blue.opacity(0.2))
-                                        .cornerRadius(4)
+                        NavigationLink(destination: RecipeDetailView(recipe: recipe)) {
+                            HStack(spacing: 12) {
+                                if let image = imageFromData(recipe.imageData) {
+                                    image
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 80, height: 80)
+                                        .cornerRadius(8)
+                                        .clipped()
+                                } else {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color.gray.opacity(0.3))
+                                        .frame(width: 80, height: 80)
+                                        .overlay(
+                                            Image(systemName: "photo.fill")
+                                                .foregroundStyle(.gray)
+                                                .font(.system(size: 24))
+                                        )
                                 }
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(recipe.name)
+                                        .font(.headline)
+                                        .foregroundStyle(.primary)
+                                    Text("\(recipe.ingredients.count) ingredients")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                
+                                Spacer()
                             }
                         }
-                        .padding(.vertical, 4)
                     }
                 }
             }
