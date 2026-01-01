@@ -225,200 +225,310 @@ struct EditRecipeView: View {
     @State private var recipeName: String = ""
     @State private var recipeIngredients: [RecipeIngredient] = []
     @State private var instructions: String = ""
-    @State private var newIngredientName: String = ""
-    @State private var newIngredientQuantity: String = ""
-    @State private var newIngredientUnit: CookingUnit = .none
     @State private var selectedImageItem: PhotosPickerItem?
     @State private var selectedImageData: Data?
-    @State private var editingIndex: Int? = nil
-    @State private var editingName: String = ""
-    @State private var editingQuantity: String = ""
-    @State private var editingUnit: CookingUnit = .none
+    @State private var showingIngredientEditor = false
+    @State private var editingIngredientIndex: Int? = nil
 
-    private func addIngredient() {
-        let trimmed = newIngredientName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        recipeIngredients.append(RecipeIngredient(name: trimmed, quantity: newIngredientQuantity, unit: newIngredientUnit))
-        newIngredientName = ""
-        newIngredientQuantity = ""
-        newIngredientUnit = .none
-    }
-    
-    private func startEditing(at index: Int) {
-        editingIndex = index
-        editingName = recipeIngredients[index].name
-        editingQuantity = recipeIngredients[index].quantity
-        editingUnit = recipeIngredients[index].unit
-    }
-    
-    private func saveEdit() {
-        guard let index = editingIndex else { return }
-        recipeIngredients[index].name = editingName
-        recipeIngredients[index].quantity = editingQuantity
-        recipeIngredients[index].unit = editingUnit
-        editingIndex = nil
-    }
-    
-    private func cancelEdit() {
-        editingIndex = nil
-    }
-    
     var body: some View {
-        Form {
-            Section("Recipe Image") {
-                VStack(spacing: 12) {
-                    if let image = imageFromData(selectedImageData) {
-                        image
-                            .resizable()
-                            .scaledToFill()
-                            .frame(height: 200)
-                            .cornerRadius(8)
-                            .clipped()
-                    } else if let image = imageFromData(recipe.imageData) {
-                        image
-                            .resizable()
-                            .scaledToFill()
-                            .frame(height: 200)
-                            .cornerRadius(8)
-                            .clipped()
-                    } else {
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.gray.opacity(0.3))
-                            .frame(height: 200)
-                            .overlay(
-                                Image(systemName: "photo.fill")
-                                    .foregroundStyle(.gray)
-                            )
-                    }
-                    
-                    PhotosPicker(selection: $selectedImageItem, matching: .images) {
-                        Label("Select Image", systemImage: "photo")
-                    }
-                    .onChange(of: selectedImageItem) { _, newValue in
-                        Task {
-                            if let data = try await newValue?.loadTransferable(type: Data.self) {
-                                selectedImageData = data
-                            }
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Recipe Image Section
+                    VStack(spacing: 12) {
+                        if let image = imageFromData(selectedImageData) {
+                            image
+                                .resizable()
+                                .scaledToFill()
+                                .frame(height: 240)
+                                .cornerRadius(12)
+                                .clipped()
+                        } else if let image = imageFromData(recipe.imageData) {
+                            image
+                                .resizable()
+                                .scaledToFill()
+                                .frame(height: 240)
+                                .cornerRadius(12)
+                                .clipped()
+                        } else {
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.gray.opacity(0.2))
+                                .frame(height: 240)
+                                .overlay(
+                                    Image(systemName: "photo.fill")
+                                        .foregroundStyle(.gray)
+                                        .font(.system(size: 48))
+                                )
                         }
-                    }
-                }
-            }
-            
-            Section("Recipe Name") {
-                TextField("Recipe name", text: $recipeName)
-            }
-            
-            Section("Instructions") {
-                TextEditor(text: $instructions)
-                    .frame(minHeight: 120)
-            }
-            
-            Section("Ingredients Needed") {
-                VStack(alignment: .leading, spacing: 8) {
-                    TextField("Ingredient", text: $newIngredientName)
-                        .onSubmit { addIngredient() }
-                        .submitLabel(.done)
-                    HStack(spacing: 8) {
-                        TextField("Quantity", text: $newIngredientQuantity)
-                            .frame(maxWidth: 80)
-                        Picker("", selection: $newIngredientUnit) {
-                            ForEach(CookingUnit.allCases, id: \.self) { unit in
-                                Text(unit.displayName).tag(unit)
-                            }
-                        }
-                        .frame(maxWidth: 100)
-                        Spacer()
-                        Button {
-                            addIngredient()
-                        } label: {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 20))
+                        
+                        PhotosPicker(selection: $selectedImageItem, matching: .images) {
+                            Label("Change Image", systemImage: "photo.badge.checkmark")
+                                .font(.system(size: 16, weight: .semibold))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(Color.blue.opacity(0.1))
                                 .foregroundStyle(.blue)
+                                .cornerRadius(8)
                         }
-                        .buttonStyle(.borderless)
-                        .contentShape(Rectangle())
+                        .onChange(of: selectedImageItem) { _, newValue in
+                            Task {
+                                if let data = try await newValue?.loadTransferable(type: Data.self) {
+                                    selectedImageData = data
+                                }
+                            }
+                        }
                     }
-                }
-                
-                ForEach(Array(recipeIngredients.enumerated()), id: \.offset) { index, ingredient in
-                    if editingIndex == index {
+                    .padding(.horizontal)
+                    
+                    VStack(spacing: 20) {
+                        // Recipe Name
                         VStack(alignment: .leading, spacing: 8) {
-                            TextField("Ingredient", text: $editingName)
-                            HStack(spacing: 8) {
-                                TextField("Quantity", text: $editingQuantity)
-                                    .frame(maxWidth: 80)
-                                Picker("", selection: $editingUnit) {
-                                    ForEach(CookingUnit.allCases, id: \.self) { unit in
-                                        Text(unit.displayName).tag(unit)
+                            Label("Recipe Name", systemImage: "text.book")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(.gray)
+                            TextField("Enter recipe name", text: $recipeName)
+                                .font(.system(size: 18, weight: .semibold))
+                                .padding(12)
+                                .background(Color(UIColor.systemGray6))
+                                .cornerRadius(8)
+                        }
+                        
+                        // Instructions
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label("Instructions", systemImage: "list.number")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(.gray)
+                            TextEditor(text: $instructions)
+                                .font(.system(size: 16))
+                                .frame(minHeight: 140)
+                                .padding(12)
+                                .background(Color(UIColor.systemGray6))
+                                .cornerRadius(8)
+                                .scrollContentBackground(.hidden)
+                        }
+                        
+                        // Ingredients
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Label("Ingredients", systemImage: "list.bullet.clipboard")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundStyle(.gray)
+                                Spacer()
+                                Button(action: { showingIngredientEditor = true }) {
+                                    Image(systemName: "plus.circle.fill")
+                                        .font(.system(size: 20))
+                                        .foregroundStyle(.blue)
+                                }
+                            }
+                            
+                            if recipeIngredients.isEmpty {
+                                Text("No ingredients added yet")
+                                    .font(.system(size: 15))
+                                    .foregroundStyle(.secondary)
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                                    .padding(.vertical, 24)
+                            } else {
+                                VStack(spacing: 8) {
+                                    ForEach(Array(recipeIngredients.enumerated()), id: \.offset) { index, ingredient in
+                                        IngredientRow(
+                                            ingredient: ingredient,
+                                            onEdit: {
+                                                editingIngredientIndex = index
+                                                showingIngredientEditor = true
+                                            },
+                                            onDelete: {
+                                                recipeIngredients.remove(at: index)
+                                            }
+                                        )
                                     }
                                 }
-                                .frame(maxWidth: 100)
                             }
-                            HStack(spacing: 12) {
-                                Button("Delete") {
-                                    recipeIngredients.remove(at: index)
-                                    editingIndex = nil
-                                }
-                                .foregroundStyle(.red)
-                                Spacer()
-                                Button("Cancel") {
-                                    cancelEdit()
-                                }
-                                .foregroundStyle(.gray)
-                                Button("Save") {
-                                    saveEdit()
-                                }
-                                .foregroundStyle(.blue)
-                            }
-                        }
-                        .padding(.vertical, 8)
-                    } else {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(ingredient.name)
-                                .font(.body)
-                            if !ingredient.quantity.isEmpty {
-                                HStack(spacing: 2) {
-                                    Text(ingredient.quantity)
-                                    Text(ingredient.unit.rawValue)
-                                }
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            }
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            startEditing(at: index)
                         }
                     }
+                    .padding(.horizontal)
+                }
+                .padding(.vertical, 24)
+            }
+            .navigationTitle("Edit Recipe")
+            .navigationBarBackButtonHidden()
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        var updatedRecipe = recipe
+                        updatedRecipe.name = recipeName
+                        updatedRecipe.recipeIngredients = recipeIngredients
+                        updatedRecipe.instructions = instructions
+                        updatedRecipe.imageData = selectedImageData ?? recipe.imageData
+                        dataStore.updateRecipe(updatedRecipe)
+                        dismiss()
+                    }
+                    .disabled(recipeName.isEmpty)
+                }
+            }
+            .sheet(isPresented: $showingIngredientEditor) {
+                if let index = editingIngredientIndex {
+                    IngredientEditorView(
+                        ingredient: $recipeIngredients[index],
+                        isPresented: $showingIngredientEditor,
+                        onDelete: {
+                            recipeIngredients.remove(at: index)
+                            editingIngredientIndex = nil
+                        }
+                    )
+                } else {
+                    IngredientEditorView(
+                        ingredient: .constant(RecipeIngredient(name: "", quantity: "", unit: .none)),
+                        isPresented: $showingIngredientEditor,
+                        onAdd: { newIngredient in
+                            recipeIngredients.append(newIngredient)
+                            editingIngredientIndex = nil
+                        }
+                    )
+                }
+            }
+            .onChange(of: showingIngredientEditor) { _, isShowing in
+                if !isShowing {
+                    editingIngredientIndex = nil
                 }
             }
         }
-        .navigationTitle("Edit Recipe")
         .onAppear {
             recipeName = recipe.name
             recipeIngredients = recipe.recipeIngredients
             instructions = recipe.instructions
             selectedImageData = recipe.imageData
         }
-        .navigationBarBackButtonHidden()
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") {
-                    dismiss()
+    }
+}
+
+struct IngredientRow: View {
+    let ingredient: RecipeIngredient
+    let onEdit: () -> Void
+    let onDelete: () -> Void
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(ingredient.name)
+                    .font(.system(size: 16, weight: .semibold))
+                if !ingredient.quantity.isEmpty {
+                    HStack(spacing: 4) {
+                        Text(ingredient.quantity)
+                        Text(ingredient.unit.rawValue)
+                    }
+                    .font(.system(size: 14))
+                    .foregroundStyle(.secondary)
                 }
             }
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Save") {
-                    var updatedRecipe = recipe
-                    updatedRecipe.name = recipeName
-                    updatedRecipe.recipeIngredients = recipeIngredients
-                    updatedRecipe.instructions = instructions
-                    updatedRecipe.imageData = selectedImageData ?? recipe.imageData
-                    dataStore.updateRecipe(updatedRecipe)
-                    dismiss()
+            
+            Spacer()
+            
+            HStack(spacing: 8) {
+                Button(action: onEdit) {
+                    Image(systemName: "pencil.circle.fill")
+                        .font(.system(size: 18))
+                        .foregroundStyle(.blue)
                 }
-                .disabled(recipeName.isEmpty)
+                .contentShape(Rectangle())
+                
+                Button(action: onDelete) {
+                    Image(systemName: "trash.circle.fill")
+                        .font(.system(size: 18))
+                        .foregroundStyle(.red)
+                }
+                .contentShape(Rectangle())
+            }
+        }
+        .padding(12)
+        .background(Color(UIColor.systemGray6))
+        .cornerRadius(8)
+    }
+}
+
+struct IngredientEditorView: View {
+    @Binding var ingredient: RecipeIngredient
+    @Binding var isPresented: Bool
+    var onDelete: (() -> Void)? = nil
+    var onAdd: ((RecipeIngredient) -> Void)? = nil
+    
+    @State private var name: String = ""
+    @State private var quantity: String = ""
+    @State private var unit: CookingUnit = .none
+    
+    let isEditing: Bool
+    
+    init(ingredient: Binding<RecipeIngredient>, isPresented: Binding<Bool>, onDelete: (() -> Void)? = nil, onAdd: ((RecipeIngredient) -> Void)? = nil) {
+        self._ingredient = ingredient
+        self._isPresented = isPresented
+        self.onDelete = onDelete
+        self.onAdd = onAdd
+        self.isEditing = onDelete != nil
+        
+        _name = State(initialValue: ingredient.wrappedValue.name)
+        _quantity = State(initialValue: ingredient.wrappedValue.quantity)
+        _unit = State(initialValue: ingredient.wrappedValue.unit)
+    }
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Ingredient Name") {
+                    TextField("e.g., Olive Oil", text: $name)
+                }
+                
+                Section("Quantity") {
+                    TextField("e.g., 2", text: $quantity)
+                        .keyboardType(.decimalPad)
+                }
+                
+                Section("Unit") {
+                    Picker("Unit", selection: $unit) {
+                        ForEach(CookingUnit.allCases, id: \.self) { unit in
+                            Text(unit.displayName).tag(unit)
+                        }
+                    }
+                }
+                
+                if isEditing && onDelete != nil {
+                    Section {
+                        Button(role: .destructive, action: {
+                            onDelete?()
+                            isPresented = false
+                        }) {
+                            HStack {
+                                Image(systemName: "trash")
+                                Text("Delete Ingredient")
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle(isEditing ? "Edit Ingredient" : "Add Ingredient")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        isPresented = false
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(isEditing ? "Save" : "Add") {
+                        if isEditing {
+                            ingredient.name = name
+                            ingredient.quantity = quantity
+                            ingredient.unit = unit
+                        } else {
+                            onAdd?(RecipeIngredient(name: name, quantity: quantity, unit: unit))
+                        }
+                        isPresented = false
+                    }
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
             }
         }
     }

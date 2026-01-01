@@ -7,13 +7,29 @@
 
 import Foundation
 
-struct Ingredient: Identifiable, Codable {
-    var id = UUID()
+struct Ingredient: Identifiable, Codable, Hashable {
+    var id: UUID
     var name: String
-    
-    init(name: String) {
+    var category: IngredientCategory
+
+    init(id: UUID = UUID(), name: String, category: IngredientCategory = .other) {
+        self.id = id
         self.name = name
+        self.category = category
     }
+}
+
+enum IngredientCategory: String, Codable, CaseIterable, Identifiable {
+    case produce = "Produce"
+    case meatAndSeafood = "Meat & Seafood"
+    case dairyAndEggs = "Dairy & Eggs"
+    case pantry = "Pantry"
+    case bakeryAndBread = "Bakery & Bread"
+    case frozen = "Frozen"
+    case beverages = "Beverages"
+    case other = "Other"
+
+    var id: Self { self }
 }
 
 enum CookingUnit: String, Codable, CaseIterable {
@@ -85,3 +101,4 @@ struct Recipe: Identifiable, Codable {
         return recipeIngredients.map { Ingredient(name: $0.name) }
     }
 }
+
